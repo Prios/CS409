@@ -137,12 +137,12 @@ print(len(list_tokenized_test))
 
 maxlen = max([len(x) - 1 for x in list_tokenized_train])
 vocab_size = len(tokenizer.word_index) + 1
+print ("> Maxlen: %d" % maxlen)
 
 # Pad sequences
 
 X_t = pad_sequences(list_tokenized_train, maxlen=maxlen)
 X_te = pad_sequences(list_tokenized_test, maxlen=maxlen)
-X_te[:1]
 
 # Input layer
 
