@@ -72,8 +72,8 @@ test = test.sample(frac=1).reset_index(drop=True)
 # y_concat_test = concat_test['type'].astype('category').cat.codes
 
 # Change categorical to index codes
-# train = train[:10000]
-# test = test[:5000]
+train = train[:50000]
+test = test[:5000]
 
 train['type'] = pd.Categorical(train['type'])
 test['type'] = pd.Categorical(test['type'])
@@ -129,8 +129,8 @@ print('> Execution Time: %.2f' % (time.time() - start))
 
 tokenizer = Tokenizer()
 tokenizer.fit_on_texts(doc0_t)
-list_tokenized_train = tokenizer.texts_to_sequences(doc0_t)
-list_tokenized_test = tokenizer.texts_to_sequences(doc0_te)
+list_tokenized_train = [l for l in tokenizer.texts_to_sequences(doc0_t) if len(l) < 200]
+list_tokenized_test = [l for l in tokenizer.texts_to_sequences(doc0_te) if len(l) < 200]
 
 print(len(list_tokenized_train))
 print(len(list_tokenized_test))
