@@ -3,9 +3,13 @@ import sys, os, re, csv, codecs, numpy as np, pandas as pd
 
 from keras.preprocessing.text import Tokenizer
 from keras.preprocessing.sequence import pad_sequences
-from keras.layers import Dense, Input, LSTM, Embedding, Dropout, Activation
+from keras.layers import Dense, Input, LSTM, Embedding, Dropout, Activation, Flatten
 from keras.layers import Bidirectional, GlobalMaxPool1D
-from keras.models import Model
+from keras.layers import SimpleRNN
+from keras.layers import GRU
+from keras.layers import Convolution1D, MaxPooling1D, concatenate
+from keras.models import Model, Sequential
+from keras.optimizers import SGD
 from keras import initializers, regularizers, constraints, optimizers, layers
 
 from IPython.display import display
@@ -24,6 +28,31 @@ import threading
 import subprocess
 import multiprocessing
 from tqdm import tqdm
+
+# units
+units = 100
+
+# Convolution parameters
+filter_length = 3
+nb_filter = 150
+pool_length = 2
+cnn_activation = 'relu'
+border_mode = 'same'
+
+# RNN parameters
+output_size = 50
+rnn_activation = 'tanh'
+recurrent_activation = 'hard_sigmoid'
+
+# Compile parameters
+loss = 'binary_crossentropy'
+optimizer = 'rmsprop'
+
+# Training parameters
+batch_size = 50
+nb_epoch = 3
+validation_split = 0.25
+shuffle = True
 
 # Init files
 
@@ -72,8 +101,8 @@ test = test.sample(frac=1).reset_index(drop=True)
 # y_concat_test = concat_test['type'].astype('category').cat.codes
 
 # Change categorical to index codes
-train = train[:50000]
-test = test[:5000]
+train = train[:100]
+test = test[:10]
 
 train['type'] = pd.Categorical(train['type'])
 test['type'] = pd.Categorical(test['type'])
@@ -162,46 +191,185 @@ inp = Input(shape=(maxlen, ))
 
 # Embed layer
 
-embed_size = 200
-x = Embedding(vocab_size, embed_size)(inp)
+embed_size = 300
+embedding_layer = Embedding(vocab_size, embed_size, input_length=maxlen)
 
-# LSTM layer
-
-x = LSTM(200, return_sequences=False, name='lstm_layer')(x)
-
-# Dropout layer (1/2)
-
-x = Dropout(0.1)(x)
-
-# Dense Layer
-
-x = Dense(50, activation="relu")(x)
-
-# Droupout layer (2/2)
-
-x = Dropout(0.1)(x)
-
-# Final Dense layer
-
-x = Dense(1, activation="sigmoid")(x)
-
-# Optimizer
-
-model = Model(inputs=inp, outputs=x)
-model.compile(loss='binary_crossentropy',
-                  optimizer='adam',
-                  metrics=['accuracy'])
-
+#########################################
+# Simple RNN
+model = Sequential()
+model.add(embedding_layer)
+model.add(SimpleRNN(output_dim=output_size, activation=rnn_activation))
+model.add(Dropout(0.25))
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+model.compile(loss=loss,
+              optimizer=optimizer,
+              metrics=['accuracy'])
+print("> Simple RNN")
 print(model.summary())
-
-# Train model
-
-batch_size = 100
-epochs = 5
-model.fit(X_t, y_t, batch_size=batch_size, epochs=epochs, validation_split=0.1)
-
+model.fit(X_t, y_t, batch_size=batch_size, epochs=nb_epoch,validation_split=validation_split,shuffle=shuffle)
 scores = model.evaluate(X_te, y_te, verbose=1)
 print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+#########################################
+# GRU
+
+model = Sequential()
+model.add(embedding_layer)
+model.add(GRU(output_dim=output_size,activation=rnn_activation,recurrent_activation=recurrent_activation))
+model.add(Dropout(0.25))
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+
+model.compile(loss=loss,
+              optimizer=optimizer,
+              metrics=['accuracy'])
+
+print('> GRU')
+print(model.summary())
+model.fit(X_t, y_t, batch_size=batch_size, epochs=nb_epoch,validation_split=validation_split,shuffle=shuffle)
+scores = model.evaluate(X_te, y_te, verbose=1)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+#################################################
+# Bidirectional LSTM
+
+model = Sequential()
+model.add(embedding_layer)
+model.add(Bidirectional(LSTM(units=output_size,activation=rnn_activation,recurrent_activation=recurrent_activation)))
+model.add(Dropout(0.25))
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+
+model.compile(loss=loss,
+              optimizer=optimizer,
+              metrics=['accuracy'])
+
+print('> Bidirectional LSTM')
+print(model.summary())
+model.fit(X_t, y_t, batch_size=batch_size, nb_epoch=nb_epoch,validation_split=validation_split,shuffle=shuffle)
+scores = model.evaluate(X_te, y_te, verbose=1)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+##################################################
+# LSTM
+
+model = Sequential()
+model.add(embedding_layer)
+model.add(Dropout(0.25))
+model.add(LSTM(units=output_size,activation=rnn_activation,recurrent_activation=recurrent_activation))
+model.add(Dropout(0.25))
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+
+model.compile(loss=loss,
+              optimizer=optimizer,
+              metrics=['accuracy'])
+
+print('> LSTM')
+print(model.summary())
+model.fit(X_t, y_t, batch_size=batch_size, epochs=nb_epoch,validation_split=validation_split,shuffle=shuffle)
+scores = model.evaluate(X_te, y_te, verbose=1)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+
+##########################################################
+# CNN + LSTM
+
+model = Sequential()
+model.add(embedding_layer)
+model.add(Dropout(0.5))
+model.add(Convolution1D(nb_filter=nb_filter,
+                        filter_length=filter_length,
+                        border_mode=border_mode,
+                        activation=cnn_activation,
+                        subsample_length=1))
+model.add(MaxPooling1D(pool_length=pool_length))
+model.add(LSTM(units=output_size,activation=rnn_activation,recurrent_activation=recurrent_activation))
+model.add(Dropout(0.25))
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+model.compile(loss=loss,
+              optimizer=optimizer,
+              metrics=['accuracy'])
+
+print('> CNN + LSTM')
+print(model.summary())
+model.fit(X_t, y_t, batch_size=batch_size, epochs=nb_epoch,validation_split=validation_split,shuffle=shuffle)
+scores = model.evaluate(X_te, y_te, verbose=1)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+
+###########################################################
+# CNN
+# Based on "Convolutional Neural Networks for Sentence Classification" by Yoon Kim http://arxiv.org/pdf/1408.5882v2.pdf
+# https://github.com/keon/keras-text-classification/blob/master/train.py
+
+filter_sizes = (3,4,5)
+num_filters = 100
+graph_in = Input(shape=(maxlen, embed_size))
+convs = []
+for fsz in filter_sizes:
+    conv = Convolution1D(filters=num_filters,
+                         kernel_size=fsz,
+                         border_mode='valid',
+                         activation='relu',
+                         subsample_length=1)(graph_in)
+    pool = MaxPooling1D(pool_length=2)(conv)
+    flatten = Flatten()(pool)
+    convs.append(flatten)
+
+if len(filter_sizes) > 1:
+    out = concatenate(convs)
+else:
+    out = convs[0]
+
+graph = Model(input=graph_in, output=out)
+model = Sequential()
+model.add(embedding_layer)
+model.add(Dropout(0.25, input_shape=(maxlen, embed_size)))
+model.add(graph)
+model.add(Dense(64))
+model.add(Dropout(0.5))
+model.add(Activation('relu'))
+model.add(Dense(1))
+model.add(Activation('sigmoid'))
+opt = SGD(lr=0.01, momentum=0.80, decay=1e-6, nesterov=True)
+model.compile(loss=loss, optimizer='rmsprop', metrics=['accuracy'])
+print(model.summary())
+model.fit(X_t, y_t, batch_size=batch_size, epochs=nb_epoch,validation_split=validation_split,shuffle=shuffle)
+scores = model.evaluate(X_te, y_te, verbose=1)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+
+model.compile(loss=loss, optimizer=opt, metrics=['accuracy'])
+print(model.summary())
+model.fit(X_t, y_t, batch_size=batch_size, epochs=nb_epoch,validation_split=validation_split,shuffle=shuffle)
+scores = model.evaluate(X_te, y_te, verbose=1)
+print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
+
+
+# def model(x):
+#     # LSTM layer
+#     x = LSTM(200, return_sequences=False, name='lstm_layer')(x)
+#     # Dropout layer (1/2)
+#     x = Dropout(0.5)(x)
+#     # Dense Layer
+#     x = Dense(50, activation="relu")(x)
+#     # Droupout layer (2/2)
+#     x = Dropout(0.5)(x)
+#     # Final Dense layer
+#     x = Dense(1, activation="sigmoid")(x)
+#     return x
+# # Optimizer
+# model = Model(inputs=inp, outputs=x)
+# model.compile(loss='binary_crossentropy',
+#                   optimizer='adam',
+#                   metrics=['accuracy'])
+# print(model.summary())
+
+# # Train model
+
+# batch_size = 100
+# epochs = 5
+# model.fit(X_t, y_t, batch_size=batch_size, epochs=epochs, validation_split=0.1)
+
+# scores = model.evaluate(X_te, y_te, verbose=1)
+# print("%s: %.2f%%" % (model.metrics_names[1], scores[1]*100))
 
 # test_text = "못 보신 분들 \"마이티빙\"에서 무료로 보세요. 가입필요 없음."
 
