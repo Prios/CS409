@@ -163,12 +163,14 @@ for i, l in enumerate(tokenizer.texts_to_sequences(doc0_t)):
     if len(l) > 200:
         remove_indices.append(i)
 list_tokenized_train = [l for i, l in enumerate(tokenizer.texts_to_sequences(doc0_t)) if i not in remove_indices]
+y_t = [l for i, l in enumerate(y_t) if i not in remove_indices]
 
 remove_indices = []
 for i, l in enumerate(tokenizer.texts_to_sequences(doc0_te)):
     if len(l) > 200:
         remove_indices.append(i)
 list_tokenized_test = [l for i, l in enumerate(tokenizer.texts_to_sequences(doc0_te)) if i not in remove_indices]
+y_te = [l for i, l in enumerate(y_te) if i not in remove_indices]
 
 # list_tokenized_train = [l for l in tokenizer.texts_to_sequences(doc0_t) if len(l) < 200]
 # list_tokenized_test = [l for l in tokenizer.texts_to_sequences(doc0_te) if len(l) < 200]
