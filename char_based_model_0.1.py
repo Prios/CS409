@@ -101,8 +101,8 @@ test = test.sample(frac=1).reset_index(drop=True)
 # y_concat_test = concat_test['type'].astype('category').cat.codes
 
 # Change categorical to index codes
-train = train[:100]
-test = test[:10]
+train = train[:50000]
+test = test[:5000]
 
 train['type'] = pd.Categorical(train['type'])
 test['type'] = pd.Categorical(test['type'])
