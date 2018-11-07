@@ -162,14 +162,14 @@ tokenizer = Tokenizer()
 tokenizer.fit_on_texts(doc0_t)
 remove_indices = []
 for i, l in enumerate(tokenizer.texts_to_sequences(doc0_t)):
-    if len(l) > maxlen:
+    if len(l) > max_len:
         remove_indices.append(i)
 list_tokenized_train = [l for i, l in enumerate(tokenizer.texts_to_sequences(doc0_t)) if i not in remove_indices]
 y_t = [l for i, l in enumerate(y_t) if i not in remove_indices]
 
 remove_indices = []
 for i, l in enumerate(tokenizer.texts_to_sequences(doc0_te)):
-    if len(l) > maxlen:
+    if len(l) > max_len:
         remove_indices.append(i)
 list_tokenized_test = [l for i, l in enumerate(tokenizer.texts_to_sequences(doc0_te)) if i not in remove_indices]
 y_te = [l for i, l in enumerate(y_te) if i not in remove_indices]
