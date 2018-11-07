@@ -29,18 +29,20 @@ import subprocess
 import multiprocessing
 from tqdm import tqdm
 
-# units
-units = 100
+# params
+units = 300
+embed_size = 100
+max_len = 50
 
 # Convolution parameters
 filter_length = 3
-nb_filter = 150
+nb_filter = 300
 pool_length = 2
 cnn_activation = 'relu'
 border_mode = 'same'
 
 # RNN parameters
-output_size = 50
+output_size = 300
 rnn_activation = 'tanh'
 recurrent_activation = 'hard_sigmoid'
 
@@ -101,8 +103,8 @@ test = test.sample(frac=1).reset_index(drop=True)
 # y_concat_test = concat_test['type'].astype('category').cat.codes
 
 # Change categorical to index codes
-train = train[:50000]
-test = test[:5000]
+train = train[:10000]
+test = test[:1000]
 
 train['type'] = pd.Categorical(train['type'])
 test['type'] = pd.Categorical(test['type'])
@@ -160,14 +162,14 @@ tokenizer = Tokenizer()
 tokenizer.fit_on_texts(doc0_t)
 remove_indices = []
 for i, l in enumerate(tokenizer.texts_to_sequences(doc0_t)):
-    if len(l) > 200:
+    if len(l) > maxlen:
         remove_indices.append(i)
 list_tokenized_train = [l for i, l in enumerate(tokenizer.texts_to_sequences(doc0_t)) if i not in remove_indices]
 y_t = [l for i, l in enumerate(y_t) if i not in remove_indices]
 
 remove_indices = []
 for i, l in enumerate(tokenizer.texts_to_sequences(doc0_te)):
-    if len(l) > 200:
+    if len(l) > maxlen:
         remove_indices.append(i)
 list_tokenized_test = [l for i, l in enumerate(tokenizer.texts_to_sequences(doc0_te)) if i not in remove_indices]
 y_te = [l for i, l in enumerate(y_te) if i not in remove_indices]
@@ -181,6 +183,7 @@ print(len(list_tokenized_test))
 maxlen = max([len(x) - 1 for x in list_tokenized_train])
 vocab_size = len(tokenizer.word_index) + 1
 print ("> Maxlen: %d" % maxlen)
+print ("> Vocab size: %d" % vocab_size)
 
 # Pad sequences
 
@@ -193,7 +196,6 @@ inp = Input(shape=(maxlen, ))
 
 # Embed layer
 
-embed_size = 300
 embedding_layer = Embedding(vocab_size, embed_size, input_length=maxlen)
 
 #########################################
